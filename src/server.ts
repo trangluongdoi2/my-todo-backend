@@ -4,6 +4,7 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import authRoute from '@/route/auth.route';
 import logger from '@/config/logger';
+import todoRoute from '@/route/todo.route';
 
 const configsCors = {
   origin: '*',
@@ -25,12 +26,10 @@ const url = `http://localhost:${PORT}`;
 app.use(bodyParser.json());
 app.use(cors(configsCors));
 app.use('/api', authRoute);
-app.use('', (req: Request, res: Response) => {
-  res.status(200).send('Hello My Nodejs');
-});
+app.use('/api', todoRoute);
 app.listen(PORT, () => {
   console.log(url);
-  logger.info(url);
+  // logger.info(url);
 });
 
 export {}
