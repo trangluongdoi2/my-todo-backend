@@ -1,5 +1,15 @@
-import cognitoService from "@/services/cognito.service";
-import { AuthenticationDetails, CognitoUser, CognitoUserAttribute } from "amazon-cognito-identity-js";
+import dotenv from 'dotenv';
+import { 
+  CognitoIdentityProviderClient,
+  InitiateAuthCommand,
+  SignUpCommand,
+  ConfirmSignUpCommand,
+  AuthFlowType,
+  DeleteUserPoolCommand,
+  AdminDeleteUserCommand,
+  DeleteUserCommand,
+} from "@aws-sdk/client-cognito-identity-provider";
+
 
 type InputRegister = {
   username: string,
@@ -18,127 +28,166 @@ type InputLogin = {
   password: string
 }
 
+dotenv.config();
 class AuthServices {
-  async signUp(input: InputRegister) {
-    const userPool = cognitoService.createUserPool();
-    const attributeList = [];
-    const dataEmail = {
-      Name : 'email',
-      Value : input.email
-    }
-
-    const attributeEmail = new CognitoUserAttribute(dataEmail);
-    attributeList.push(attributeEmail);
-    userPool.signUp(input.username, input.password, attributeList, [], (err: any, result: any) => {
-      if (err) {
-        console.log(err);
-        return {
-          status: 500,
-          message: 'Register Failed!'
-        }
-      }
-      const cognitoUser = result.user;
-      console.log(cognitoUser, 'cognitoUser...');
-    })
-    return {
-      status: 200,
-      message: 'Register Successfully!'
-    };
-  }
-
-  async signUpConfirm(input: InputRegisterConfirmation) {
-    const userPool = cognitoService.createUserPool();
-    const userData = {
-      Username: input.username,
-      Pool: userPool,
-    }
-
-    const cognitoUser = new CognitoUser(userData);
-    const promise = new Promise((resolve, reject) => {
-      try {
-        cognitoUser.confirmRegistration(input.code.toString(), true, (err: any, res: any) => {
-          if (err) {
-            return resolve(null);
-          }
-          return resolve(res);
-        });
-      } catch (error) {
-        return {
-          status: 500,
-          message: 'Register Confirm 123Failed!'
-        }
-      }
+  private cognitoClient: CognitoIdentityProviderClient;
+  constructor() {
+    this.cognitoClient = new CognitoIdentityProviderClient({
+      region: process.env.COGNITO_POOL_REGION,
     });
-
-    const resultConfirm = await promise;
-    if (resultConfirm) {
-      return {
-        status: 200,
-        message: 'Register Confirm Successfully!'
-      }
-    }
-    return {
-      status: 500,
-      message: 'Register Confirm Failed!'
-    }
   }
 
   async signIn(input: InputLogin) {
-    const userPool = cognitoService.createUserPool();
-    const userData = {
-      Username: input.username,
-      Pool: userPool,
+    const params = {
+      AuthFlow: AuthFlowType.USER_PASSWORD_AUTH,
+      ClientId: process.env.COGNITO_APP_CLIENT_ID,
+      AuthParameters: {
+        USERNAME: input.username,
+        PASSWORD: input.password,
+      },
     };
-  
-    const authenticationData = {
-      Username: input.username,
-      Password: input.password,
-    }
-
-    const authenticationDetails = new AuthenticationDetails(authenticationData);
-
-    const cognitoUser = new CognitoUser(userData);
-    const promise = new Promise((resolve, reject) => {
-      try {
-        cognitoUser.authenticateUser(authenticationDetails, {
-          onSuccess: (res: any) => {
-            const data: any = {
-              refreshToken: res.getRefreshToken().getToken(),
-              accessToken: res.getAccessToken().getJwtToken(),
-              accessTokenExpiresAt: res.getAccessToken().getExpiration(),
-              idToken: res.getIdToken().getJwtToken(),
-              idTokenExpiresAt: res.getAccessToken().getExpiration(),
-            };
-            resolve(data as any);
-          },
-          onFailure: (err: any) => {
-            console.log(err, 'err...');
-            resolve(null);
-          }
-        });
-      } catch (error) {
-        reject(error);
-      }
-    });
-    const data = await promise as any;
-    if (data) {
-      return {
-        status: 200,
-        message: 'Login Successfully!',
-        data: {
-          accessToken: data?.accessToken,
-          refreshToken: data?.refreshToken,
+    try {
+      const command = new InitiateAuthCommand(params as any);
+      const { AuthenticationResult } = await this.cognitoClient.send(command);
+      if (AuthenticationResult) {
+        console.log(AuthenticationResult, 'AuthenticationResult..');
+        const data = {
+          idToken: AuthenticationResult.IdToken,
+          accessToken: AuthenticationResult.AccessToken,
+          refreshToken: AuthenticationResult.RefreshToken
+        }
+        return {
+          status: 200,
+          message: "User signed in successfully",
+          data
         }
       }
-    }
-    return {
-      status: 401,
-      message: 'Login Failed!'
+      return {
+        status: 500,
+        message: "Error signing in",
+        data: null,
+      }
+    } catch (error) {
+      return {
+        status: 500,
+        message: "Error signing in",
+        data: null,
+      }
     }
   }
 
-  async deleteUser(input: any) {
-    console.log('deleteUser...');
+  async signUp(input: InputRegister) {
+    const params = {
+      ClientId: process.env.COGNITO_APP_CLIENT_ID,
+      Username: input.username,
+      Password: input.password,
+      UserAttributes: [
+        {
+          Name: "email",
+          Value: input.email,
+        },
+      ],
+    };
+    try {
+      const command = new SignUpCommand(params);
+      await this.cognitoClient.send(command);
+      return {
+        status: 200,
+        message: "User signed up successfully"
+      }
+    } catch (error) {
+      console.error("Error signing up: ", error);
+      return {
+        status: 500,
+        message: "Error signing up"
+      }
+    }
+  };
+
+  async confirmSignUp(input: InputRegisterConfirmation) {
+    const params = {
+      ClientId: process.env.COGNITO_APP_CLIENT_ID,
+      Username: input.username,
+      ConfirmationCode: input.code.toString(),
+    };
+    try {
+      const command = new ConfirmSignUpCommand(params);
+      await this.cognitoClient.send(command);
+      return {
+        status: 200,
+        message: "User confirmed successfully"
+      }
+    } catch (error) {
+      console.error("Error confirming sign up: ", error);
+      return {
+        status: 500,
+        message: "Error confirming sign up"
+      }
+    }
+  }
+
+  async refreshToken(input: any) {
+    const params = {
+      AuthFlow: AuthFlowType.REFRESH_TOKEN_AUTH,
+      UserPoolId: process.env.COGNITO_USER_POOL_ID,
+      ClientId: process.env.COGNITO_APP_CLIENT_ID,
+      AuthParameters: {
+        USERNAME: input.username,
+        REFRESH_TOKEN: input.token,
+      },
+    }
+
+    try {
+      const command = new InitiateAuthCommand(params as any);
+      const { AuthenticationResult } = await this.cognitoClient.send(command);
+      if (AuthenticationResult) {
+        const data = {
+          accessToken: AuthenticationResult.AccessToken,
+          refreshToken: AuthenticationResult.RefreshToken,
+          idToken: AuthenticationResult.IdToken
+        }
+        return {
+          status: 200,
+          message: "Token refreshed successfully",
+          data
+        }
+      }
+      return {
+        status: 500,
+        message: "Error refreshing token"
+      }
+    } catch (error) {
+      console.error(error);
+      return {
+        status: 500,
+        message: "Error refreshing token"
+      }
+    }
+  }
+
+  async deleteUser(username: string) {
+    console.log(username, 'deleteUser');
+    // const command = new AdminDeleteUserCommand({
+    //   UserPoolId: process.env.COGNITO_USER_POOL_ID as string,
+    //   Username: username,
+    // });
+    // try {
+    //   await this.cognitoClient.send(command);
+    //   return {
+    //     status: 200,
+    //     message: "User deleted successfully"
+    //   }
+    // } catch (error) {
+    //   console.log(error);
+    //   return {
+    //     status: 500,
+    //     message: "Error deleting user"
+    //   }
+    // }
+    return {
+      status: 500,
+      message: "Error deleting user"
+    }
   }
 }
 

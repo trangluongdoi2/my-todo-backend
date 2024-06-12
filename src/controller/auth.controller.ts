@@ -1,11 +1,11 @@
-import { authServices} from '@/services/auth.service';
+import { authServices } from '@/services/auth.service';
 import { Request, Response } from 'express';
 
 class AuthController {
   async signUp(req: Request, res: Response) {
     const { username, password, email } = req.body as any;
     const inputRegister = {
-      username: username + Math.floor(Math.random() * 100).toString(),
+      username,
       password,
       email,
     }
@@ -14,26 +14,34 @@ class AuthController {
   }
 
   async signUpConfirm(req: Request, res: Response) {
-    const data = await authServices.signUpConfirm(req.body as any);
+    const data = await authServices.confirmSignUp(req.body as any);
     res.status(data.status).send(data.message);
   }
 
   async signIn(req: Request, res: Response) {
     const data = await authServices.signIn(req.body as any);
+    res.status(data?.status).json({
+      message: data?.message,
+      data: data?.data
+    });
+  }
+
+  async refreshToken(req: Request, res: Response) {
+    const data = await authServices.refreshToken(req.body as any);
     res.status(data.status).json({
       message: data.message,
       data: data.data
     });
   }
 
-  update(req: Request, res: Response) {
+  updateUser(req: Request, res: Response) {
     console.log(req.body as any);
-    res.send('update...')
+    res.send('updateUser...')
   }
-
-  deleteUser(req: Request, res: Response) {
-    console.log(req.body as any);
-    res.send('delete...')
+  
+  async deleteUser(req: Request, res: Response) {
+    const data = await authServices.deleteUser(req.body.username as string);
+    res.status(data.status).send(data.message);
   }
 }
 
