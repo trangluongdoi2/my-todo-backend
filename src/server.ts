@@ -27,9 +27,12 @@ app.use(bodyParser.json());
 app.use(cors(configsCors));
 app.use('/api', authRoute);
 app.use('/api', todoRoute);
+app.get('/', (req: Request, res: Response) => {
+  res.send('<h1>My Todo App</h1>');
+});
 app.listen(PORT, () => {
   console.log(url);
-  // logger.info(url);
+  logger.info(url);
 });
 
 export {}
