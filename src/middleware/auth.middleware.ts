@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import jwkToPem from 'jwk-to-pem';
 import jwt from 'jsonwebtoken';
 
-let pems: { [key: string]: any} = {};
+let pems: { [key: string]: any } = {};
 
 class AuthMiddleWare {
   private poolRegion: string = 'ap-southeast-1';

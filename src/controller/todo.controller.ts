@@ -20,7 +20,18 @@ class TodoController {
 
   async createTodo(req: Request, res: Response) {
     const data = await todoService.createTodo(req.body as any);
-    res.status(data.status).send(data.message);
+    res.status(data.status).json({
+      message: data.message,
+      data: data.data
+    });
+  }
+  
+  async updateTodo(req: Request, res: Response) {
+    const data = await todoService.createTodo(req.body as any);
+    res.status(data.status).json({
+      message: data.message,
+      data: data.data
+    });
   }
 
   async createTable(req: Request, res: Response) {
