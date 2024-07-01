@@ -36,6 +36,35 @@
           "404": { "description": "Not found" },
           "500": { "description": "Internal server error" }
         }
+      },
+      "post": {
+        "tags": ["Todo"],
+        "summary": "Create Todo Item",
+        "description": "Create Todo Item",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExampleSchemaHeader"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExampleSchemaBody"
+                }
+              }
+            }
+          },
+          "404": { "description": "Not found" },
+          "500": { "description": "Internal server error" }
+        }
       }
     }
   },

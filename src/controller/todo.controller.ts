@@ -1,9 +1,17 @@
-import { todoService } from "@/services/todo.service";
+import TodoService from "@/services/todo.service";
 import { Request, Response } from "express";
 
 class TodoController {
   async getTodoList(req: Request, res: Response) {
-    const data = await todoService.getTodoList();
+    const data = await TodoService.getTodoList();
+    res.status(data.status).json({
+      message: data.message,
+      data: data.data
+    });
+  }
+
+  async getTodoById(req: Request, res: Response) {
+    const data = await TodoService.getTodoItemDetails(req.params.id);
     res.status(data.status).json({
       message: data.message,
       data: data.data
@@ -11,7 +19,7 @@ class TodoController {
   }
 
   async queryTodoList(req: Request, res: Response) {
-    const data = await todoService.queryTodoList(req?.query);
+    const data = await TodoService.queryTodoList(req?.query);
     res.status(data.status).json({
       message: data.message,
       data: data.data
@@ -19,7 +27,7 @@ class TodoController {
   }
 
   async createTodo(req: Request, res: Response) {
-    const data = await todoService.createTodo(req.body as any);
+    const data = await TodoService.createTodo(req.body as any);
     res.status(data.status).json({
       message: data.message,
       data: data.data
@@ -27,15 +35,15 @@ class TodoController {
   }
   
   async updateTodo(req: Request, res: Response) {
-    const data = await todoService.createTodo(req.body as any);
+    const data = await TodoService.updateTodo(req.body as any);
     res.status(data.status).json({
       message: data.message,
       data: data.data
     });
   }
 
-  async createTable(req: Request, res: Response) {
-    const data = await todoService.createTable();
+  async deleteTodo(req: Request, res: Response) {
+    const data = await TodoService.deleteTodo(req.params.id);
     res.status(data.status).send(data.message);
   }
 }

@@ -191,4 +191,4 @@ class AuthServices {
   }
 }
 
-export const authServices = new AuthServices();
+export default new AuthServices();

@@ -17,64 +17,36 @@ import {
   DeleteCommand
 } from '@aws-sdk/lib-dynamodb';
 import { InputToDoItem, IssueStatus, Priority, TodoItemDetails } from '@/db/type';
-import TodoTable from "../db/todoDb";
+import TodoTable from "@/db/todoDb";
 
 class TodoService {
   private tableName = 'Todo';
-  async getListTables() {
-    const command = new ListTablesCommand({});
-    const tables =  await TodoTable.client.send(command);
-    return tables;
-  }
+  async getTodoList() {
+    let data: any[] = [];
+    const scanCommand = new ScanCommand({
+      TableName: this.tableName,
+    })
 
-  async describeTable(tableName: string) {
-    const command = new DescribeTableCommand({
-      TableName: tableName,
-    });
-    const response = await TodoTable.client.send(command);
-    return response.Table;
-  }
-
-  async createTable() {
-    // const command = new CreateTableCommand({
-    //   TableName: 'Todo',
-    //   AttributeDefinitions: [
-    //     {
-    //       AttributeName: 'id',
-    //       AttributeType: 'S',
-    //     },
-    //   ],
-    //   KeySchema: [
-    //     {
-    //       AttributeName: 'id',
-    //       KeyType: 'HASH',
-    //     },
-    //   ],
-    //   ProvisionedThroughput: {
-    //     ReadCapacityUnits: 1,
-    //     WriteCapacityUnits: 1,
-    //   },
-    // });
-
-    // try {
-    //   const response = await TodoTable.client.send(command);
-    //   return {
-    //     status: 200,
-    //     message: 'Create Table Successfully'
-    //   }
-    // } catch (error) {
-    //   return {
-    //     status: 500,
-    //     message: error,
-    //   }
-    // }
+    try {
+      const response = await TodoTable.docClient.send(scanCommand);
+      data = [...response?.Items || []] as any;
+    } catch (error) {
+      // console.log(error, 'error...');
+      return {
+        status: 500,
+        message: error,
+        data: [], 
+      }
+    }
     return {
-      status: 500,
-      message: 'Not Allow to Create Table...'
+      status: 200,
+      message: "Todo list fetched successfully",
+      data,
     }
   }
 
   async getTodoItemDetails(id: string) {
+    console.log('getTodoItemDetails...');
     let data;
     const queryCommand = new QueryCommand({
       TableName: this.tableName,
@@ -103,84 +75,45 @@ class TodoService {
     }
   }
 
-  async getTodoList() {
-    let data: any[] = [];
-    const scanCommand = new ScanCommand({
-      TableName: this.tableName,
-    })
-
-    try {
-      const response = await TodoTable.docClient.send(scanCommand);
-      data = [...response?.Items || []] as any;
-    } catch (error) {
-      // console.log(error, 'error...');
-      return {
-        status: 500,
-        message: error,
-        data: [], 
-      }
-    }
+  async queryTodoList(query?: Record<string, any>) {
     return {
       status: 200,
-      message: "Todo list fetched successfully",
-      data,
+      message: 'queryTodoList',
+      data: [],
     }
-  }
-
-  async queryTodoList(query?: Record<string, any>) {
-    console.log(query, 'query..');
-    let data: any[] = [];
-    // const queryCommand = new QueryCommand({
-    //   TableName: this.tableName,
-    //   KeyConditionExpression: 'Status = :status',
-    //   ExpressionAttributeValues: {
-    //     ':status': {
-    //       S: 'PENDING',
-    //     },
-    // }});
-
+    // console.log(query, 'query..');
+    // let data: any[] = [];
     // const queryCommand = new ScanCommand({
     //   TableName: this.tableName,
-    //   FilterExpression: 'status = :status',
+    //   FilterExpression: 'begins_with("This is the", :title)',
     //   ExpressionAttributeValues: {
-    //     ':status': {
-    //       S: 'PENDING',
+    //     // ':title': 'This is the first task7dd6c313-9572-4798-afb1-49aa87b5c865',
+    //     ':title': {
+    //       S: 'This is the first task7dd6c313-9572-4798-afb1-49aa87b5c865'
     //     },
     //   },
-    //   ProjectionExpression: "status",
+    //   ProjectionExpression: "title, id",
     // });
 
-    const queryCommand = new ScanCommand({
-      TableName: this.tableName,
-      FilterExpression: 'begins_with("This is the", :title)',
-      ExpressionAttributeValues: {
-        // ':title': 'This is the first task7dd6c313-9572-4798-afb1-49aa87b5c865',
-        ':title': {
-          S: 'This is the first task7dd6c313-9572-4798-afb1-49aa87b5c865'
-        },
-      },
-      ProjectionExpression: "title, id",
-    });
-
-    try {
-      const response = await TodoTable.docClient.send(queryCommand);
-      console.log(response, 'response...');
-      data = [...response?.Items || []] as any;
-    } catch (error) {
-      // console.log('Case error...');
-      console.log(error, 'error...');
-      return {
-        status: 500,
-        message: error,
-        data: [], 
-      }
-    }
-    return {
-      status: 200,
-      message: "Todo list fetched successfully",
-      data,
-    }
-  };
+    // try {
+    //   const response = await TodoTable.docClient.send(queryCommand);
+    //   console.log(response, 'response...');
+    //   data = [...response?.Items || []] as any;
+    // } catch (error) {
+    //   // console.log('Case error...');
+    //   console.log(error, 'error...');
+    //   return {
+    //     status: 500,
+    //     message: error,
+    //     data: [], 
+    //   }
+    // }
+    // return {
+    //   status: 200,
+    //   message: "Todo list fetched successfully",
+    //   data,
+    // }
+  }
 
   async createTodo(input: InputToDoItem) {
     const {
@@ -240,15 +173,20 @@ class TodoService {
       ExpressionAttributeValues: expressionAttributeValues,
       ReturnValues: "ALL_NEW",
     });
-  
-    const response = await TodoTable.docClient.send(command);
-    console.log(response, 'response..');
-    return {
-      status: 200,
-      message: "Todo updated successfully"
+
+    try {
+      const response = await TodoTable.docClient.send(command);
+      console.log(response, 'response..');
+    } catch (error) {
+      return {
+        status: 500,
+        message: 'Todo created failed',
+        data: null,
+      }
     }
     return {
-      message: 200,
+      status: 200,
+      message: 'Todo update successfully',
       data: null,
     }
   }
@@ -258,9 +196,16 @@ class TodoService {
       TableName: this.tableName,
       Key: { id },
     });
-  
-    const response = await TodoTable.docClient.send(command);
-    console.log(response);
+
+    try {
+      const response = await TodoTable.docClient.send(command);
+      console.log(response);
+    } catch (error) {
+      return {
+        status: 500,
+        message: "Todo deleted failed!"
+      }
+    }
     return {
       status: 200,
       message: "Todo deleted successfully"
@@ -268,4 +213,4 @@ class TodoService {
   }
 }
 
-export const todoService = new TodoService();
+export default new TodoService();
