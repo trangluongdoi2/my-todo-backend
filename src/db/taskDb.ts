@@ -4,7 +4,7 @@ import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import dotenv from 'dotenv';
 
 dotenv.config()
-class TodoTable {
+class TaskTable {
   public client: DynamoDBClient;
   public docClient: DynamoDBDocumentClient;
   constructor() {
@@ -19,4 +19,4 @@ class TodoTable {
   }
 }
 
-export default new TodoTable();
+export default new TaskTable();
