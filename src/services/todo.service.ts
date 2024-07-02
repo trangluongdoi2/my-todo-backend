@@ -16,7 +16,7 @@ import {
   UpdateCommand,
   DeleteCommand
 } from '@aws-sdk/lib-dynamodb';
-import { InputToDoItem, IssueStatus, Priority, TodoItemDetails } from '@/db/type';
+import { TodoItemInput, TodoStatus, Priority, TodoItemDetails } from '@/db/type';
 import TodoTable from "@/db/todoDb";
 
 class TodoService {
@@ -115,22 +115,24 @@ class TodoService {
     // }
   }
 
-  async createTodo(input: InputToDoItem) {
+  async createTodo(input: TodoItemInput) {
     const {
-      project = '',
-      name = '',
+      projects = [],
+      todoName = '',
       label = '',
       description = '',
-      status = IssueStatus.TODO,
+      title = '',
+      todoStatus = TodoStatus.PENDING,
       priority = Priority.MEDIUM,
     } = input;
 
     const item = {
       id: uuidv4(),
-      project,
-      name,
+      title,
+      projects,
+      todoName,
       label,
-      status,
+      todoStatus,
       description,
       priority,
       createdAt: new Date().toISOString(),
@@ -158,11 +160,20 @@ class TodoService {
   }
 
   async updateTodo(input: TodoItemDetails) {
-    console.log(input, 'updateTodo..');
-    const updateExpression = 'set title = :title, description = :description';
+    let data;
+    const notChangeAttributes = ['id', 'createdAt'];
+    const keyOfAttributes = Object.entries(input).map(([key, _]) => key).filter((key: string) => !notChangeAttributes.includes(key));
+    const expressions = keyOfAttributes.map((key: string) => `${key} = :${key}`).join(', ');
+    const updateExpression = `set ${expressions}`;
     const expressionAttributeValues = {
       ':title': input.title,
       ':description': input.description,
+      ':updatedAt': new Date().toISOString(),
+      ':projects': input.projects,
+      ':todoName': input.todoName,
+      ':label': input.label,
+      ':todoStatus': input.todoStatus,
+      ':priority': input.priority,
     }
     const command = new UpdateCommand({
       TableName: this.tableName,
@@ -177,17 +188,19 @@ class TodoService {
     try {
       const response = await TodoTable.docClient.send(command);
       console.log(response, 'response..');
+      data = response?.Attributes as TodoItemDetails;
     } catch (error) {
+      console.log(error, 'error...');
       return {
         status: 500,
-        message: 'Todo created failed',
+        message: 'Todo update failed',
         data: null,
       }
     }
     return {
       status: 200,
       message: 'Todo update successfully',
-      data: null,
+      data,
     }
   }
 

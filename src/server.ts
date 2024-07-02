@@ -14,6 +14,7 @@ function initApp() {
       'GET',
       'POST',
       'PUT',
+      'DELETE',
     ],
     allowedHeaders: [
       'Content-Type',
