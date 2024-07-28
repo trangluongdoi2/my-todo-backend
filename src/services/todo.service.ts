@@ -25,13 +25,13 @@ class TodoService {
     let data: any[] = [];
     const scanCommand = new ScanCommand({
       TableName: this.tableName,
-    })
+    });
 
     try {
       const response = await TodoTable.docClient.send(scanCommand);
       data = [...response?.Items || []] as any;
     } catch (error) {
-      // console.log(error, 'error...');
+      console.log(error, 'error...');
       return {
         status: 500,
         message: error,
@@ -46,7 +46,6 @@ class TodoService {
   }
 
   async getTodoItemDetails(id: string) {
-    console.log('getTodoItemDetails...');
     let data;
     const queryCommand = new QueryCommand({
       TableName: this.tableName,
@@ -162,7 +161,7 @@ class TodoService {
   async updateTodo(input: TodoItemDetails) {
     let data;
     const notChangeAttributes = ['id', 'createdAt'];
-    const keyOfAttributes = Object.entries(input).map(([key, _]) => key).filter((key: string) => !notChangeAttributes.includes(key));
+    const keyOfAttributes = Object.keys(input).filter((key: string) => !notChangeAttributes.includes(key));
     const expressions = keyOfAttributes.map((key: string) => `${key} = :${key}`).join(', ');
     const updateExpression = `set ${expressions}`;
     const expressionAttributeValues = {
@@ -187,7 +186,6 @@ class TodoService {
 
     try {
       const response = await TodoTable.docClient.send(command);
-      console.log(response, 'response..');
       data = response?.Attributes as TodoItemDetails;
     } catch (error) {
       console.log(error, 'error...');
@@ -201,6 +199,52 @@ class TodoService {
       status: 200,
       message: 'Todo update successfully',
       data,
+    }
+  }
+
+  async updateAttachments(input: { id: string, urls: string[] }) {
+    const { data: todoItem } =  await this.getTodoItemDetails(input.id);
+    if (!todoItem) {
+      return {
+        status: 500,
+        message: 'Todo update failed',
+        data: null,
+      }
+    }
+    const objectNewUrls = input.urls.map((filePath) => ({
+      id: uuidv4(),
+      filePath,
+    }))
+    const currentAttachments = todoItem?.attachments || [];
+    const newAttachments = [...objectNewUrls, ...currentAttachments];
+    const updateExpression = 'set attachments = :attachments, updatedAt = :updatedAt';
+    const expressionAttributeValues = {
+      ':updatedAt': new Date().toISOString(),
+      ':attachments': newAttachments,
+    }
+    const command = new UpdateCommand({
+      TableName: this.tableName,
+      Key: {
+        id: input.id,
+      },
+      UpdateExpression: updateExpression,
+      ExpressionAttributeValues: expressionAttributeValues,
+      ReturnValues: "ALL_NEW",
+    });
+    try {
+      const { Attributes } = await TodoTable.docClient.send(command);
+      return {
+        status: 200,
+        message: 'Todo update successfully',
+        data: Attributes,
+      }
+    } catch (error) {
+      console.error(error);
+      return {
+        status: 500,
+        message: 'Todo update failed',
+        data: null,
+      }
     }
   }
 

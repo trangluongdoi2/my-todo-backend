@@ -1,4 +1,5 @@
 import TodoService from "@/services/todo.service";
+import UploadS3Service from '@/services/upload.service';
 import { Request, Response } from "express";
 
 class TodoController {
@@ -36,6 +37,19 @@ class TodoController {
   
   async updateTodo(req: Request, res: Response) {
     const data = await TodoService.updateTodo(req.body as any);
+    res.status(data.status).json({
+      message: data.message,
+      data: data.data
+    });
+  }
+
+  async uploadImages(req: Request, res: Response) {
+    const id = req.body.id || '';
+    const urls = await UploadS3Service.handle((req?.files as any) || []);
+    if (!urls.length) {
+      res.sendStatus(500).send('Uploaded Failed!');
+    }
+    const data = await TodoService.updateAttachments({ id, urls });
     res.status(data.status).json({
       message: data.message,
       data: data.data

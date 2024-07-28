@@ -9,6 +9,7 @@ import {
   AdminDeleteUserCommand,
   DeleteUserCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
+import config from '@/config';
 
 
 type InputRegister = {
@@ -33,14 +34,14 @@ class AuthServices {
   private cognitoClient: CognitoIdentityProviderClient;
   constructor() {
     this.cognitoClient = new CognitoIdentityProviderClient({
-      region: process.env.COGNITO_POOL_REGION,
+      region: config.aws.region,
     });
   }
 
   async signIn(input: InputLogin) {
     const params = {
       AuthFlow: AuthFlowType.USER_PASSWORD_AUTH,
-      ClientId: process.env.COGNITO_APP_CLIENT_ID,
+      ClientId: config.aws.cognito_app_client_id,
       AuthParameters: {
         USERNAME: input.username,
         PASSWORD: input.password,
@@ -78,7 +79,7 @@ class AuthServices {
 
   async signUp(input: InputRegister) {
     const params = {
-      ClientId: process.env.COGNITO_APP_CLIENT_ID,
+      ClientId: config.aws.cognito_app_client_id,
       Username: input.username,
       Password: input.password,
       UserAttributes: [
@@ -106,7 +107,7 @@ class AuthServices {
 
   async confirmSignUp(input: InputRegisterConfirmation) {
     const params = {
-      ClientId: process.env.COGNITO_APP_CLIENT_ID,
+      ClientId: config.aws.cognito_app_client_id,
       Username: input.username,
       ConfirmationCode: input.code.toString(),
     };
@@ -129,8 +130,8 @@ class AuthServices {
   async refreshToken(input: any) {
     const params = {
       AuthFlow: AuthFlowType.REFRESH_TOKEN_AUTH,
-      UserPoolId: process.env.COGNITO_USER_POOL_ID,
-      ClientId: process.env.COGNITO_APP_CLIENT_ID,
+      UserPoolId: config.aws.cognito_user_pool_id,
+      ClientId: config.aws.cognito_app_client_id,
       AuthParameters: {
         USERNAME: input.username,
         REFRESH_TOKEN: input.token,
