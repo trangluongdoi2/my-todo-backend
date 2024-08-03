@@ -11,5 +11,6 @@ router.post('/todo/create', todoController.createTodo);
 router.put('/todo/update/:id', todoController.updateTodo);
 router.delete('/todo/delete/:id', todoController.deleteTodo);
 router.post('/todo/upload/:id', uploadMiddleWare.array('images'), todoController.uploadImages);
+router.get('/todo/download/:key', todoController.downloadImage);
 
 export default router;

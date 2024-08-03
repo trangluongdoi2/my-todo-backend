@@ -21,6 +21,7 @@ import TodoTable from "@/db/todoDb";
 
 class TodoService {
   private tableName = 'Todo';
+  // Need refactor, use query instead of scan
   async getTodoList() {
     let data: any[] = [];
     const scanCommand = new ScanCommand({
@@ -75,43 +76,12 @@ class TodoService {
   }
 
   async queryTodoList(query?: Record<string, any>) {
+    console.log(query, 'query...');
     return {
       status: 200,
       message: 'queryTodoList',
       data: [],
     }
-    // console.log(query, 'query..');
-    // let data: any[] = [];
-    // const queryCommand = new ScanCommand({
-    //   TableName: this.tableName,
-    //   FilterExpression: 'begins_with("This is the", :title)',
-    //   ExpressionAttributeValues: {
-    //     // ':title': 'This is the first task7dd6c313-9572-4798-afb1-49aa87b5c865',
-    //     ':title': {
-    //       S: 'This is the first task7dd6c313-9572-4798-afb1-49aa87b5c865'
-    //     },
-    //   },
-    //   ProjectionExpression: "title, id",
-    // });
-
-    // try {
-    //   const response = await TodoTable.docClient.send(queryCommand);
-    //   console.log(response, 'response...');
-    //   data = [...response?.Items || []] as any;
-    // } catch (error) {
-    //   // console.log('Case error...');
-    //   console.log(error, 'error...');
-    //   return {
-    //     status: 500,
-    //     message: error,
-    //     data: [], 
-    //   }
-    // }
-    // return {
-    //   status: 200,
-    //   message: "Todo list fetched successfully",
-    //   data,
-    // }
   }
 
   async createTodo(input: TodoItemInput) {
@@ -173,6 +143,7 @@ class TodoService {
       ':label': input.label,
       ':todoStatus': input.todoStatus,
       ':priority': input.priority,
+      ':attachments': input.attachments,
     }
     const command = new UpdateCommand({
       TableName: this.tableName,
@@ -202,7 +173,8 @@ class TodoService {
     }
   }
 
-  async updateAttachments(input: { id: string, urls: string[] }) {
+  async updateAtrributeTodo<T>(input: { id: string, field: string, value: T }) {
+    console.log('updateAtrributeTodo....');
     const { data: todoItem } =  await this.getTodoItemDetails(input.id);
     if (!todoItem) {
       return {
@@ -211,9 +183,48 @@ class TodoService {
         data: null,
       }
     }
-    const objectNewUrls = input.urls.map((filePath) => ({
+    const updateExpression = `set ${input.field} = :${input.field}, updatedAt = :updatedAt`;
+    const expressionAttributeValues = {
+      ':updatedAt': new Date().toISOString(),
+    }
+    const command = new UpdateCommand({
+      TableName: this.tableName,
+      Key: {
+        id: input.id,
+      },
+      UpdateExpression: updateExpression,
+      ExpressionAttributeValues: expressionAttributeValues,
+      ReturnValues: "ALL_NEW",
+    });
+    try {
+      const { Attributes } = await TodoTable.docClient.send(command);
+      return {
+        status: 200,
+        message: 'Todo update successfully',
+        data: Attributes,
+      }
+    } catch (error) {
+      console.error(error);
+      return {
+        status: 500,
+        message: 'Todo update failed',
+        data: null,
+      }
+    }
+  }
+
+  async updateAttachments(input: { id: string, files: any[] }) {
+    const { data: todoItem } =  await this.getTodoItemDetails(input.id);
+    if (!todoItem) {
+      return {
+        status: 500,
+        message: 'Todo update failed',
+        data: null,
+      }
+    }
+    const objectNewUrls = input.files.map((file: any) => ({
       id: uuidv4(),
-      filePath,
+      ...file,
     }))
     const currentAttachments = todoItem?.attachments || [];
     const newAttachments = [...objectNewUrls, ...currentAttachments];

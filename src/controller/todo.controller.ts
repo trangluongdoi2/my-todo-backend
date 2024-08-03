@@ -45,15 +45,28 @@ class TodoController {
 
   async uploadImages(req: Request, res: Response) {
     const id = req.body.id || '';
-    const urls = await UploadS3Service.handle((req?.files as any) || []);
-    if (!urls.length) {
+    const uploadedFiles = await UploadS3Service.handle((req?.files as any) || []);
+    if (!uploadedFiles.length) {
       res.sendStatus(500).send('Uploaded Failed!');
     }
-    const data = await TodoService.updateAttachments({ id, urls });
+    const data = await TodoService.updateAttachments({ id, files: uploadedFiles });
     res.status(data.status).json({
       message: data.message,
       data: data.data
     });
+  }
+
+  async downloadImage(req: Request, res: Response) {
+    const key = req.params.key || '';
+    const data = await UploadS3Service.getObject(key);
+    if (!data) {
+      res.status(500);
+    } else {
+      res.status(200).json({
+        message: 'Download successfully!',
+        data: data
+      });
+    }
   }
 
   async deleteTodo(req: Request, res: Response) {

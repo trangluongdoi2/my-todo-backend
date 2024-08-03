@@ -24,4 +24,5 @@ export interface TodoItemInput {
 
 export interface TodoItemDetails extends TodoItemInput {
   id: string,
+  attachments?: Array<{ id: string, filePath: string }>,
 }

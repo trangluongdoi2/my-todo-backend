@@ -1,4 +1,4 @@
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { PutObjectCommand, GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import config from '@/config';
 
 const client = new S3Client({
@@ -17,6 +17,7 @@ function getObjectUrl(key: string) {
 
 async function uploadS3(files: any, bucketName: string) {
   const resultUrls: any[] = [];
+  const result: Array<Record<string, any> | undefined> = [];
   await Promise.allSettled(files.map((file: any) => {
     const [nameWithoutExtension] = file.originalname.split(/(?=\.[^.]+$)/);
     const metaData = {
@@ -31,17 +32,22 @@ async function uploadS3(files: any, bucketName: string) {
     }
     const url = getObjectUrl(file.originalname);
     resultUrls.push(url);
+    result.push({
+      filePath: url,
+      fileName: file.originalname,
+      name: nameWithoutExtension,
+    })
     const command = new PutObjectCommand(params);
     return client.send(command);
   })).then((data) => {
     data.forEach((res: any, index: number) => {
       if (res.status === 'fulfilled') {
       } else {
-        resultUrls[index] = undefined;
+        result[index] = undefined;
       }
     })
   });
-  return resultUrls;
+  return result;
 }
 
 export default uploadS3;
